@@ -51,9 +51,9 @@ def index(request):
         try:
             inputs = {
                 "area_m2": float(request.GET.get("area_m2", DEFAULT_INPUTS["area_m2"])),
-                "floors": float(request.GET.get("floors", DEFAULT_INPUTS["floors"])),
-                "rooms": float(request.GET.get("rooms", DEFAULT_INPUTS["rooms"])),
-                "bedrooms": float(request.GET.get("bedrooms", DEFAULT_INPUTS["bedrooms"])),
+                "floors": int(float(request.GET.get("floors", DEFAULT_INPUTS["floors"]))),
+                "rooms": int(float(request.GET.get("rooms", DEFAULT_INPUTS["rooms"]))),
+                "bedrooms": int(float(request.GET.get("bedrooms", DEFAULT_INPUTS["bedrooms"]))),
                 "district": request.GET.get("district", DEFAULT_INPUTS["district"]),
             }
 
