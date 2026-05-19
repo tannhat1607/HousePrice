@@ -12,7 +12,7 @@ DEFAULT_INPUTS = {
     "floors": 1,
     "rooms": 4,
     "bedrooms": 2,
-    "district": "Cam Le",
+    "district": "Cẩm Lệ",
 }
 
 

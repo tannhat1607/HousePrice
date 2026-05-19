@@ -17,13 +17,23 @@ FEATURE_COLUMNS = [
 TARGET_COLUMN = "Price"                 # gia dat, don vi trieu VND
 
 DISTRICTS = {
-    "Hai Chau": 1,
-    "Thanh Khe": 2,
-    "Son Tra": 3,
-    "Ngu Hanh Son": 4,
-    "Lien Chieu": 5,
-    "Cam Le": 6,
-    "Hoa Vang": 7,
+    "Hải Châu": 1,
+    "Thanh Khê": 2,
+    "Sơn Trà": 3,
+    "Ngũ Hành Sơn": 4,
+    "Liên Chiểu": 5,
+    "Cẩm Lệ": 6,
+    "Hòa Vang": 7,
+}
+
+ADDRESS_ALIASES = {
+    "Hai Chau": "Hải Châu",
+    "Thanh Khe": "Thanh Khê",
+    "Son Tra": "Sơn Trà",
+    "Ngu Hanh Son": "Ngũ Hành Sơn",
+    "Lien Chieu": "Liên Chiểu",
+    "Cam Le": "Cẩm Lệ",
+    "Hoa Vang": "Hòa Vang",
 }
 
 
@@ -81,6 +91,7 @@ class LinearRegressionModel:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
         df = df.dropna(subset=FEATURE_COLUMNS + [TARGET_COLUMN, "Address"])
+        df["Address"] = df["Address"].replace(ADDRESS_ALIASES)
 
         # Loai bo dong bat thuong de model hoc on dinh hon.
         df = df[

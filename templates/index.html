@@ -6,35 +6,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dự đoán giá đất Đà Nẵng</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'predictor/css/app.css' %}">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
+    <nav class="navbar navbar-expand-lg border-bottom sticky-top">
         <div class="container">
-            <a class="navbar-brand fw-bold text-primary" href="/">HousePrice</a>
-            <button class="btn btn-outline-primary btn-sm" type="button" id="theme-toggle">Dark mode</button>
+            <a class="navbar-brand" href="/">HousePrice</a>
+            <button class="btn btn-outline-primary btn-sm" type="button" id="theme-toggle">🌙</button>
         </div>
     </nav>
 
-    <main class="container py-5">
+    <main class="container py-4">
+
+        <!-- HERO SLIDESHOW -->
         <section class="hero mb-4">
-            <img class="hero-image" src="{% static 'predictor/images/dragon-bridge.jpg' %}" alt="Cầu Rồng Đà Nẵng">
+            <div class="hero-slides">
+                <div class="hero-slide active" style="background-image: url('{% static 'predictor/images/Danang.jpg' %}')"></div>
+                <div class="hero-slide" style="background-image: url('{% static 'predictor/images/pic1.jpg' %}')"></div>
+                <div class="hero-slide" style="background-image: url('{% static 'predictor/images/pic2.jpeg' %}')"></div>
+                <div class="hero-slide" style="background-image: url('{% static 'predictor/images/pic3.jpg' %}')"></div>
+            </div>
             <div class="hero-overlay">
                 <h1>Dự đoán giá đất Đà Nẵng</h1>
                 <p>Ứng dụng Linear Regression để ước lượng giá đất theo diện tích, số tầng, số phòng và khu vực.</p>
             </div>
+            <div class="hero-dots" id="hero-dots"></div>
         </section>
 
+        <!-- FORM + RESULT -->
         <div class="row g-4 align-items-stretch">
             <div class="col-lg-7">
                 <section class="panel h-100">
-                    <div class="form-heading mb-4">
-                        <h1 class="h3 mb-2">Dự đoán giá nhà</h1>
-                        <p class="text-secondary mb-0">Nhập thông số lô đất, mô hình Linear Regression sẽ ước lượng giá theo triệu VND.</p>
+                    <div class="form-heading">
+                        <p class="eyebrow mb-1">Công cụ dự đoán</p>
+                        <h1 class="h4 mb-1">Nhập thông số lô đất</h1>
+                        <p class="text-secondary small mb-0">Mô hình Linear Regression sẽ ước lượng giá theo triệu VND.</p>
                     </div>
 
                     {% if error %}
-                        <div class="alert alert-danger">{{ error }}</div>
+                        <div class="alert alert-danger mt-3">{{ error }}</div>
                     {% endif %}
 
                     <form method="post" id="predict-form" novalidate>
@@ -42,7 +53,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label" for="area_m2">Diện tích đất (m²)</label>
-                                <input class="form-control" id="area_m2" name="area_m2" type="number" min="1" step="0.1" value="{{ inputs.area_m2 }}" required>
+                                <input class="form-control" id="area_m2" name="area_m2" type="number" min="1" max="5000" step="0.1" value="{{ inputs.area_m2 }}" placeholder="VD: 80" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="district">Quận/Huyện</label>
@@ -53,33 +64,36 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label" for="floors">Số tầng có thể xây</label>
-                                <input class="form-control" id="floors" name="floors" type="number" min="0" max="20" step="1" value="{{ inputs.floors }}" required>
+                                <label class="form-label" for="floors">Số tầng</label>
+                                <input class="form-control" id="floors" name="floors" type="number" min="0" max="20" step="1" value="{{ inputs.floors }}" placeholder="VD: 3" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label" for="rooms">Số phòng</label>
-                                <input class="form-control" id="rooms" name="rooms" type="number" min="1" max="20" step="1" value="{{ inputs.rooms }}" required>
+                                <input class="form-control" id="rooms" name="rooms" type="number" min="1" max="20" step="1" value="{{ inputs.rooms }}" placeholder="VD: 5" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label" for="bedrooms">Số phòng ngủ</label>
-                                <input class="form-control" id="bedrooms" name="bedrooms" type="number" min="0" max="15" step="1" value="{{ inputs.bedrooms }}" required>
+                                <label class="form-label" for="bedrooms">Phòng ngủ</label>
+                                <input class="form-control" id="bedrooms" name="bedrooms" type="number" min="0" max="15" step="1" value="{{ inputs.bedrooms }}" placeholder="VD: 3" required>
                             </div>
                         </div>
-
                         <div class="d-flex align-items-center justify-content-center gap-3 mt-4">
-                            <button class="btn btn-primary px-4" type="submit">Dự đoán giá</button>
+                            <button class="btn btn-primary px-5" type="submit">Dự đoán giá</button>
                             <button class="btn btn-outline-secondary" type="button" id="reset-btn">Nhập lại</button>
                         </div>
                     </form>
                 </section>
             </div>
 
+            <!-- RESULT -->
             <div class="col-lg-5" id="result-section">
                 <section class="result-card h-100">
-                    <p class="eyebrow mb-2">Kết quả</p>
+                    <p class="eyebrow mb-3">Kết quả</p>
                     {% if result %}
-                        <div class="price">{{ result.price_billion_vnd|floatformat:2 }} tỷ</div>
-                        <div class="text-secondary mb-4">{{ result.price_million_vnd|floatformat:0 }} triệu VND</div>
+                        <div class="price-row">
+                            <div class="price">{{ result.price_billion_vnd|floatformat:2 }}</div>
+                            <div class="price-unit">tỷ</div>
+                        </div>
+                        <div class="price-sub">{{ result.price_million_vnd|floatformat:0 }} triệu VND</div>
                         <div class="metric">
                             <span>Đơn giá ước tính</span>
                             <strong>{{ result.price_per_m2_million|floatformat:2 }} triệu/m²</strong>
@@ -92,38 +106,45 @@
                             <span>Diện tích</span>
                             <strong>{{ inputs.area_m2 }} m²</strong>
                         </div>
+                        <div class="metric">
+                            <span>Số tầng / Phòng ngủ</span>
+                            <strong>{{ inputs.floors }} tầng / {{ inputs.bedrooms }} PN</strong>
+                        </div>
                     {% else %}
                         <div class="empty-state">
-                            <p class="mb-0">Kết quả sẽ hiển thị sau khi bạn nhập thông số và bấm dự đoán.</p>
+                            <svg width="56" height="56" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                            <p>Nhập thông số và bấm <strong>Dự đoán giá</strong> để xem kết quả.</p>
                         </div>
                     {% endif %}
                 </section>
             </div>
         </div>
 
+        <!-- STATS -->
         {% if model %}
             <section class="mt-4 stats-grid">
                 <div class="stat">
                     <span>Dữ liệu train</span>
-                    <strong>{{ model.row_count }}</strong>
+                    <strong>{{ model.row_count }} mẫu</strong>
                 </div>
                 <div class="stat">
-                    <span>RMSE</span>
+                    <span data-tooltip="Sai số trung bình (triệu VND). Càng thấp càng tốt.">RMSE ⓘ</span>
                     <strong>{{ model.rmse|floatformat:0 }} triệu</strong>
                 </div>
                 <div class="stat">
-                    <span>R²</span>
+                    <span data-tooltip="Độ chính xác mô hình (0–1). Càng gần 1 càng tốt.">R² Score ⓘ</span>
                     <strong>{{ model.r2|floatformat:3 }}</strong>
                 </div>
             </section>
 
+            <!-- CHARTS -->
             <section class="panel mt-4">
-                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                    <div>
-                        <p class="eyebrow mb-2">Dataset</p>
-                        <h2 class="h5 mb-1">Biểu đồ dữ liệu theo khu vực</h2>
-                        <p class="text-secondary mb-0">Quan sát số lượng mẫu và giá trung bình theo từng quận/huyện trong dataset.</p>
-                    </div>
+                <div class="mb-4">
+                    <p class="eyebrow mb-1">Dataset</p>
+                    <h2 class="h5 mb-1">Biểu đồ dữ liệu theo khu vực</h2>
+                    <p class="text-secondary small mb-0">Số lượng mẫu và giá trung bình theo từng quận/huyện.</p>
                 </div>
                 <div class="row g-4">
                     <div class="col-lg-6">
