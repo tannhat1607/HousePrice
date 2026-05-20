@@ -121,7 +121,7 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-DATASET_PATH = BASE_DIR / 'data' / 'danang_property_dataset.csv'
+DATASET_PATH = BASE_DIR / 'data' / 'danang_land_dataset.csv'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

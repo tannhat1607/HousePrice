@@ -1,29 +1,25 @@
 const themeToggle = document.getElementById("theme-toggle");
-const savedTheme = localStorage.getItem("houseprice-theme");
+const savedTheme = localStorage.getItem("landprice-theme");
 
 if (savedTheme === "dark") {
     document.body.classList.add("dark-mode");
-    if (themeToggle) themeToggle.textContent = "☀️";
+    if (themeToggle) themeToggle.textContent = "Light";
 }
 
 if (themeToggle) {
     themeToggle.addEventListener("click", () => {
         const isDark = document.body.classList.toggle("dark-mode");
-        localStorage.setItem("houseprice-theme", isDark ? "dark" : "light");
-        themeToggle.textContent = isDark ? "☀️" : "🌙";
+        localStorage.setItem("landprice-theme", isDark ? "dark" : "light");
+        themeToggle.textContent = isDark ? "Light" : "Dark";
     });
 }
 
 const resetButton = document.getElementById("reset-btn");
 if (resetButton) {
     resetButton.addEventListener("click", () => {
-        document.getElementById("property_type").value = "land";
         document.getElementById("area_m2").value = 100;
         document.getElementById("frontage_m").value = 5;
         document.getElementById("road_width_m").value = 7.5;
-        document.getElementById("floors").value = 0;
-        document.getElementById("rooms").value = 0;
-        document.getElementById("bedrooms").value = 0;
         document.getElementById("district").value = "Cam Le";
     });
 }
@@ -101,7 +97,7 @@ if (chartDataElement && window.Chart) {
             data: {
                 datasets: [
                     {
-                        label: "Dữ liệu thật",
+                        label: "Du lieu that",
                         data: chartData.scatter_points || [],
                         backgroundColor: "rgba(13,110,253,0.32)",
                         borderColor: "rgba(13,110,253,0.45)",
@@ -110,7 +106,7 @@ if (chartDataElement && window.Chart) {
                     },
                     {
                         type: "line",
-                        label: "Đường hồi quy",
+                        label: "Duong hoi quy",
                         data: chartData.regression_line || [],
                         borderColor: "#dc3545",
                         backgroundColor: "#dc3545",
@@ -130,7 +126,7 @@ if (chartDataElement && window.Chart) {
                     },
                     title: {
                         display: true,
-                        text: "Minh họa Linear Regression: diện tích và giá",
+                        text: "Minh hoa Linear Regression: dien tich va gia dat",
                         font: { size: 13, weight: "700" },
                         color: titleColor(),
                         padding: { bottom: 16 }
@@ -139,7 +135,7 @@ if (chartDataElement && window.Chart) {
                         callbacks: {
                             label: (context) => {
                                 const point = context.raw || {};
-                                return `${context.dataset.label}: ${point.x} m², ${Math.round(point.y)} triệu`;
+                                return `${context.dataset.label}: ${point.x} m2, ${Math.round(point.y)} trieu`;
                             }
                         }
                     }
@@ -147,13 +143,13 @@ if (chartDataElement && window.Chart) {
                 scales: {
                     x: {
                         type: "linear",
-                        title: { display: true, text: "Diện tích (m²)", color: axisColor() },
+                        title: { display: true, text: "Dien tich (m2)", color: axisColor() },
                         grid: { color: gridColor() },
                         ticks: { color: axisColor(), font: { size: 11 } }
                     },
                     y: {
                         beginAtZero: true,
-                        title: { display: true, text: "Giá (triệu VND)", color: axisColor() },
+                        title: { display: true, text: "Gia dat (trieu VND)", color: axisColor() },
                         grid: { color: gridColor() },
                         ticks: { color: axisColor(), font: { size: 11 } }
                     }
@@ -169,7 +165,7 @@ if (chartDataElement && window.Chart) {
             data: {
                 labels,
                 datasets: [{
-                    label: "Số mẫu",
+                    label: "So mau",
                     data: chartData.counts || [],
                     backgroundColor: "rgba(13,110,253,0.75)",
                     hoverBackgroundColor: "#0d6efd",
@@ -177,7 +173,7 @@ if (chartDataElement && window.Chart) {
                     borderSkipped: false
                 }]
             },
-            options: commonOptions("Số lượng mẫu theo quận/huyện")
+            options: commonOptions("So luong mau dat theo quan/huyen")
         });
     }
 
@@ -188,7 +184,7 @@ if (chartDataElement && window.Chart) {
             data: {
                 labels,
                 datasets: [{
-                    label: "Giá TB (triệu)",
+                    label: "Gia TB (trieu)",
                     data: chartData.avg_prices || [],
                     backgroundColor: "rgba(8,66,152,0.7)",
                     hoverBackgroundColor: "#084298",
@@ -196,7 +192,7 @@ if (chartDataElement && window.Chart) {
                     borderSkipped: false
                 }]
             },
-            options: commonOptions("Giá trung bình theo quận/huyện (triệu VND)")
+            options: commonOptions("Gia dat trung binh theo quan/huyen (trieu VND)")
         });
     }
 }
