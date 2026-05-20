@@ -52,6 +52,24 @@ body {
     letter-spacing: -0.02em;
     color: var(--blue) !important;
 }
+.nav-menu {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.nav-menu .nav-link {
+    color: var(--muted);
+    font-size: 0.86rem;
+    font-weight: 700;
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+.nav-menu .nav-link:hover {
+    color: var(--blue);
+    background: var(--surface-soft);
+}
 
 /* ── HERO ── */
 .hero {
@@ -145,7 +163,6 @@ body {
     display: flex;
     flex-direction: column;
 }
-
 /* Giá + tỷ cùng 1 dòng */
 .price-row {
     display: flex;
@@ -206,11 +223,26 @@ body {
 }
 .empty-state svg { opacity: 0.35; }
 .empty-state p { font-size: 0.9rem; margin: 0; max-width: 200px; }
+.compact-panel {
+    padding: 18px 20px;
+}
+.mini-label {
+    margin: 0 0 4px;
+    color: var(--muted);
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.compact-panel strong {
+    color: var(--text);
+    font-size: 0.92rem;
+}
 
 /* ── STATS GRID ── */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
 }
 .stat {
@@ -268,15 +300,26 @@ body {
     border-radius: 10px;
     background: var(--surface-soft);
 }
+.chart-box-large {
+    min-height: 420px;
+}
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
+    .navbar .container { align-items: flex-start; }
+    .nav-menu {
+        order: 3;
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 8px;
+    }
     .hero, .hero-image { min-height: 220px; }
     .hero-overlay { padding: 20px 24px; }
     .hero-overlay h1 { font-size: 1.5rem; white-space: normal; }
     .panel, .result-card { padding: 20px; }
     .stats-grid { grid-template-columns: 1fr; }
     .chart-box { min-height: 240px; }
+    .chart-box-large { min-height: 320px; }
 }
 
 /* ── HERO SLIDESHOW ── */
