@@ -242,8 +242,9 @@ def main() -> None:
             LOG.warning("Stopping because the site did not return a normal list page.")
             break
 
+        articles = soup.select("article.property-item")
         rows = []
-        for article in soup.select("article.property-item"):
+        for article in articles:
             row = parse_card(article)
             if row and row["url"] not in existing_urls:
                 existing_urls.add(str(row["url"]))
@@ -253,7 +254,7 @@ def main() -> None:
         saved += len(rows)
         LOG.info("Saved %s new rows from page %s", len(rows), page)
 
-        if not rows:
+        if not articles:
             break
         time.sleep(random.uniform(args.min_delay, args.max_delay))
 
