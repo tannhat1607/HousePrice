@@ -18,7 +18,9 @@
                 <a class="nav-link" href="{% url 'predictor:linear' %}">Linear Regression</a>
                 <a class="nav-link active" href="{% url 'predictor:analytics' %}">Analytics</a>
             </div>
-            <button class="btn btn-outline-primary btn-sm ms-2" type="button" id="theme-toggle">Dark</button>
+            <button class="theme-toggle ms-2" type="button" id="theme-toggle" aria-label="Đổi giao diện" title="Đổi giao diện">
+                <span class="theme-icon">☾</span>
+            </button>
         </div>
     </nav>
 
@@ -161,6 +163,35 @@
 
             <section class="panel mt-4">
                 <div class="mb-4">
+                    <p class="eyebrow mb-1">Comparison Charts</p>
+                    <h2 class="h5 mb-1">Biểu đồ so sánh hai thuật toán</h2>
+                </div>
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <div class="chart-box">
+                            <canvas id="metricComparisonChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="chart-box">
+                            <canvas id="r2ComparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel mt-4">
+                <div class="mb-4">
+                    <p class="eyebrow mb-1">Prediction Comparison</p>
+                    <h2 class="h5 mb-1">So sánh giá thật, Linear Regression và Random Forest</h2>
+                </div>
+                <div class="chart-box chart-box-large">
+                    <canvas id="predictionComparisonChart"></canvas>
+                </div>
+            </section>
+
+            <section class="panel mt-4">
+                <div class="mb-4">
                     <p class="eyebrow mb-1">Loss</p>
                     <h2 class="h5 mb-1">Loss giảm theo epoch</h2>
                 </div>
@@ -176,6 +207,16 @@
                 </div>
                 <div class="chart-box chart-box-large">
                     <canvas id="actualPredictedChart"></canvas>
+                </div>
+            </section>
+
+            <section class="panel mt-4">
+                <div class="mb-4">
+                    <p class="eyebrow mb-1">Random Forest Actual vs Predicted</p>
+                    <h2 class="h5 mb-1">So sánh đơn giá thật và đơn giá dự đoán bằng Random Forest</h2>
+                </div>
+                <div class="chart-box chart-box-large">
+                    <canvas id="rfActualPredictedChart"></canvas>
                 </div>
             </section>
 
@@ -205,6 +246,6 @@
     {{ chart_data|json_script:"chart-data" }}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="{% static 'predictor/js/app.js' %}"></script>
+    <script src="{% static 'predictor/js/app.js' %}?v=20260521b"></script>
 </body>
 </html>

@@ -200,6 +200,12 @@ class LinearRegressionModel:
         self.feature_count = len(FEATURES)
         self.feature_names = FEATURES
         self.actual_predicted_points = self.make_actual_predicted_points(self.y_test_unit, self.linear_pred_unit)
+        self.rf_actual_predicted_points = self.make_actual_predicted_points(
+            self.y_test_unit,
+            self.random_forest_pred_unit,
+        )
+        self.metric_comparison = self.make_metric_comparison()
+        self.prediction_comparison = self.make_prediction_comparison()
         self.loss_points = self.make_loss_points()
         self.heatmap_points, self.heatmap_labels = self.make_correlation_heatmap()
 
@@ -314,6 +320,41 @@ class LinearRegressionModel:
             ],
         }
 
+    def make_metric_comparison(self):
+        return {
+            "labels": ["Linear Regression", "Random Forest"],
+            "mae_billion": [
+                round(float(self.linear_result["mae_billion"]), 2),
+                round(float(self.random_forest_result["mae_billion"]), 2),
+            ],
+            "rmse_billion": [
+                round(float(self.linear_result["rmse_billion"]), 2),
+                round(float(self.random_forest_result["rmse_billion"]), 2),
+            ],
+            "r2": [
+                round(float(self.linear_result["r2"]), 3),
+                round(float(self.random_forest_result["r2"]), 3),
+            ],
+        }
+
+    def make_prediction_comparison(self):
+        limit = min(60, len(self.y_test_unit))
+        return {
+            "labels": [str(index + 1) for index in range(limit)],
+            "actual": [
+                round(float(value), 2)
+                for value in self.y_test_unit[:limit]
+            ],
+            "linear": [
+                round(float(value), 2)
+                for value in self.linear_pred_unit[:limit]
+            ],
+            "random_forest": [
+                round(float(value), 2)
+                for value in self.random_forest_pred_unit[:limit]
+            ],
+        }
+
     def make_correlation_heatmap(self):
         columns = FEATURES + [PRICE_PER_M2]
         labels = ["Diện tích", "Mặt tiền", "Đường", "Khu vực", "Đơn giá"]
@@ -379,6 +420,9 @@ class LinearRegressionModel:
             "regression_line": self.regression_line_points,
             "loss": self.loss_points,
             "actual_predicted": self.actual_predicted_points,
+            "rf_actual_predicted": self.rf_actual_predicted_points,
+            "metric_comparison": self.metric_comparison,
+            "prediction_comparison": self.prediction_comparison,
             "heatmap_points": self.heatmap_points,
             "heatmap_labels": self.heatmap_labels,
         }

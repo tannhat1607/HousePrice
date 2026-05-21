@@ -74,6 +74,30 @@ body {
     color: var(--blue);
     background: var(--surface-soft);
 }
+.theme-toggle {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-soft);
+    color: var(--blue);
+    line-height: 1;
+    padding: 0;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.theme-toggle:hover {
+    border-color: var(--blue);
+    background: var(--surface);
+    transform: translateY(-1px);
+}
+.theme-icon {
+    font-size: 1rem;
+    font-weight: 800;
+}
 
 /* ── HERO ── */
 .hero {

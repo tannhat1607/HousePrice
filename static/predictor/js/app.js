@@ -1,16 +1,25 @@
 const themeToggle = document.getElementById("theme-toggle");
 const savedTheme = localStorage.getItem("landprice-theme");
 
+function updateThemeIcon() {
+    if (!themeToggle) return;
+    const icon = themeToggle.querySelector(".theme-icon");
+    const isDark = document.body.classList.contains("dark-mode");
+    if (icon) icon.textContent = isDark ? "☀" : "☾";
+    themeToggle.setAttribute("aria-label", isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối");
+    themeToggle.setAttribute("title", isDark ? "Giao diện sáng" : "Giao diện tối");
+}
+
 if (savedTheme === "dark") {
     document.body.classList.add("dark-mode");
-    if (themeToggle) themeToggle.textContent = "Light";
 }
+updateThemeIcon();
 
 if (themeToggle) {
     themeToggle.addEventListener("click", () => {
         const isDark = document.body.classList.toggle("dark-mode");
         localStorage.setItem("landprice-theme", isDark ? "dark" : "light");
-        themeToggle.textContent = isDark ? "Light" : "Dark";
+        updateThemeIcon();
     });
 }
 
@@ -130,6 +139,149 @@ if (chartDataElement && window.Chart) {
         });
     }
 
+    const metricCanvas = document.getElementById("metricComparisonChart");
+    if (metricCanvas) {
+        const metricData = chartData.metric_comparison || {};
+        new Chart(metricCanvas, {
+            type: "bar",
+            data: {
+                labels: metricData.labels || [],
+                datasets: [
+                    {
+                        label: "MAE (tỷ)",
+                        data: metricData.mae_billion || [],
+                        backgroundColor: "rgba(13,110,253,0.7)",
+                        borderRadius: 6,
+                        borderSkipped: false
+                    },
+                    {
+                        label: "RMSE (tỷ)",
+                        data: metricData.rmse_billion || [],
+                        backgroundColor: "rgba(255,149,0,0.75)",
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, labels: { color: axisColor() } },
+                    title: { display: true, text: "So sánh sai số MAE/RMSE", color: titleColor() }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: axisColor() } },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: "Tỷ VNĐ", color: axisColor() },
+                        grid: { color: gridColor() },
+                        ticks: { color: axisColor() }
+                    }
+                }
+            }
+        });
+    }
+
+    const r2Canvas = document.getElementById("r2ComparisonChart");
+    if (r2Canvas) {
+        const metricData = chartData.metric_comparison || {};
+        new Chart(r2Canvas, {
+            type: "bar",
+            data: {
+                labels: metricData.labels || [],
+                datasets: [{
+                    label: "R² Score",
+                    data: metricData.r2 || [],
+                    backgroundColor: ["rgba(13,110,253,0.72)", "rgba(25,135,84,0.72)"],
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: "So sánh R² Score", color: titleColor() }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: axisColor() } },
+                    y: {
+                        beginAtZero: true,
+                        max: 1,
+                        grid: { color: gridColor() },
+                        ticks: { color: axisColor() }
+                    }
+                }
+            }
+        });
+    }
+
+    const predictionCanvas = document.getElementById("predictionComparisonChart");
+    if (predictionCanvas) {
+        const comparison = chartData.prediction_comparison || {};
+        new Chart(predictionCanvas, {
+            type: "line",
+            data: {
+                labels: comparison.labels || [],
+                datasets: [
+                    {
+                        label: "Giá thật",
+                        data: comparison.actual || [],
+                        borderColor: "#111827",
+                        backgroundColor: "rgba(17,24,39,0.08)",
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        tension: 0.25
+                    },
+                    {
+                        label: "Linear Regression",
+                        data: comparison.linear || [],
+                        borderColor: "#0d6efd",
+                        backgroundColor: "rgba(13,110,253,0.1)",
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        tension: 0.25
+                    },
+                    {
+                        label: "Random Forest",
+                        data: comparison.random_forest || [],
+                        borderColor: "#198754",
+                        backgroundColor: "rgba(25,135,84,0.1)",
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        tension: 0.25
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, labels: { color: axisColor() } },
+                    title: {
+                        display: true,
+                        text: "So sánh dự đoán trên tập test",
+                        color: titleColor()
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: "Mẫu test", color: axisColor() },
+                        grid: { display: false },
+                        ticks: { color: axisColor(), maxTicksLimit: 12 }
+                    },
+                    y: {
+                        title: { display: true, text: "Đơn giá (triệu/m²)", color: axisColor() },
+                        grid: { color: gridColor() },
+                        ticks: { color: axisColor() }
+                    }
+                }
+            }
+        });
+    }
+
     const lossCanvas = document.getElementById("lossChart");
     if (lossCanvas) {
         new Chart(lossCanvas, {
@@ -178,19 +330,19 @@ if (chartDataElement && window.Chart) {
         });
     }
 
-    const actualCanvas = document.getElementById("actualPredictedChart");
-    if (actualCanvas) {
-        const points = chartData.actual_predicted || [];
+    function renderActualPredictedChart(canvasId, points, title, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
         const maxValue = Math.max(1, ...points.flatMap((point) => [point.x, point.y]));
-        new Chart(actualCanvas, {
+        new Chart(canvas, {
             type: "scatter",
             data: {
                 datasets: [
                     {
                         label: "Actual vs Predicted",
                         data: points,
-                        backgroundColor: "rgba(13,110,253,0.35)",
-                        borderColor: "rgba(13,110,253,0.6)",
+                        backgroundColor: color.background,
+                        borderColor: color.border,
                         pointRadius: 3
                     },
                     {
@@ -208,7 +360,7 @@ if (chartDataElement && window.Chart) {
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: true, labels: { color: axisColor() } },
-                    title: { display: true, text: "Đơn giá thật và đơn giá dự đoán", color: titleColor() }
+                    title: { display: true, text: title, color: titleColor() }
                 },
                 scales: {
                     x: {
@@ -226,6 +378,20 @@ if (chartDataElement && window.Chart) {
             }
         });
     }
+
+    renderActualPredictedChart(
+        "actualPredictedChart",
+        chartData.actual_predicted || [],
+        "Linear Regression: đơn giá thật và đơn giá dự đoán",
+        { background: "rgba(13,110,253,0.35)", border: "rgba(13,110,253,0.6)" }
+    );
+
+    renderActualPredictedChart(
+        "rfActualPredictedChart",
+        chartData.rf_actual_predicted || [],
+        "Random Forest: đơn giá thật và đơn giá dự đoán",
+        { background: "rgba(25,135,84,0.35)", border: "rgba(25,135,84,0.65)" }
+    );
 
     const heatmap = document.getElementById("correlationHeatmap");
     if (heatmap) {
