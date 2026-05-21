@@ -5,14 +5,16 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import RandomForestRegressor
 
 
 TARGET = "price_million_vnd"
 PRICE_PER_M2 = "price_per_m2_million"
 
 # Cac feature dau vao cua model du doan gia dat.
-# area_x_frontage la feature tu tao: dien tich * mat tien.
-FEATURES = ["area_m2", "frontage_m", "road_width_m", "district_code", "area_x_frontage"]
+# Khong dung area_x_frontage vi feature nay tuong quan manh voi area/frontage,
+# co the lam Linear Regression hoc he so mat tien nguoc dau.
+FEATURES = ["area_m2", "frontage_m", "road_width_m", "district_code"]
 
 DISTRICTS = {
     "Hai Chau": 1,
@@ -24,12 +26,23 @@ DISTRICTS = {
     "Hoa Vang": 7,
 }
 
+DISTRICT_LABELS = {
+    "Hai Chau": "Hải Châu",
+    "Thanh Khe": "Thanh Khê",
+    "Son Tra": "Sơn Trà",
+    "Ngu Hanh Son": "Ngũ Hành Sơn",
+    "Lien Chieu": "Liên Chiểu",
+    "Cam Le": "Cẩm Lệ",
+    "Hoa Vang": "Hòa Vang",
+}
+
 
 @dataclass
 class PredictionResult:
     price_million_vnd: float
     price_billion_vnd: float
     price_per_m2_million: float
+    algorithm: str
 
 
 def predict(X, weights):
@@ -96,9 +109,6 @@ def load_land_data(dataset_path):
 
     df = df.dropna(subset=required_cols)
 
-    # Feature engineering: lo dat co mat tien lon tren dien tich lon thuong co gia tri cao hon.
-    df["area_x_frontage"] = df["area_m2"] * df["frontage_m"]
-
     # Loc cac gia tri qua bat thuong truoc khi train.
     df = df[
         (df["area_m2"].between(20, 5000))
@@ -148,11 +158,12 @@ def metrics(y_true, y_pred):
     # Cac chi so danh gia model tren tap test.
     error = y_true - y_pred
     mae = np.mean(np.abs(error))
+    mse = np.mean(error ** 2)
     rmse = np.sqrt(np.mean(error ** 2))
     ss_res = np.sum(error ** 2)
     ss_tot = np.sum((y_true - y_true.mean()) ** 2)
     r2 = 1 - ss_res / ss_tot if ss_tot else 0
-    return mae, rmse, r2
+    return mae, mse, rmse, r2
 
 
 class LinearRegressionModel:
@@ -160,56 +171,182 @@ class LinearRegressionModel:
         self.dataset_path = Path(dataset_path)
         self.df = load_land_data(self.dataset_path)
 
-        # Tao X, y tu dataset da loc.
+        # Tao X, y tu dataset da loc. y la don gia trieu/m2.
         X = np.nan_to_num(self.df[FEATURES].values, nan=0)
-        y = np.nan_to_num(self.df[TARGET].values, nan=0)
+        y = np.nan_to_num(self.df[PRICE_PER_M2].values, nan=0)
 
-        # Chia train/test va chuan hoa X, y.
-        X_train, X_test, y_train, y_test = split_train_test(X, y)
-        X_train, X_test, self.X_mean, self.X_std = normalize_train_test(X_train, X_test)
-        y_train, y_test, self.y_mean, self.y_std = normalize_train_test(y_train, y_test)
+        self.train_indexes, self.test_indexes = self.get_train_test_indexes(len(self.df))
+        self.test_area_values = self.df.iloc[self.test_indexes]["area_m2"].to_numpy(dtype=float)
+        self.y_test_unit = y[self.test_indexes]
+        self.y_test_total = y[self.test_indexes] * self.test_area_values
 
-        # Them bias sau khi chuan hoa.
-        X_train = add_bias(X_train)
-        X_test = add_bias(X_test)
+        linear_pred_total = self.train_linear_regression(X, y)
+        rf_pred_total = self.train_random_forest(X, y)
+        self.choose_best_model(linear_pred_total, rf_pred_total)
 
-        # Train model Linear Regression bang NumPy.
-        self.weights, self.train_history, self.test_history = train(X_train, y_train, X_test, y_test)
-
-        # Dua y ve don vi trieu VND de tinh metric that.
-        y_pred = predict(X_test, self.weights) * self.y_std + self.y_mean
-        y_test_real = y_test * self.y_std + self.y_mean
-
-        self.mae, self.rmse, self.r2 = metrics(y_test_real, y_pred)
+        primary_result = self.linear_result
+        self.primary_model_key = "linear"
+        self.primary_algorithm = primary_result["name"]
+        self.mae = primary_result["mae"]
+        self.mse = primary_result["mse"]
+        self.rmse = primary_result["rmse"]
+        self.r2 = primary_result["r2"]
+        self.mae_billion = self.mae / 1000
+        self.rmse_billion = self.rmse / 1000
+        self.mse_billion2 = self.mse / 1_000_000
         self.row_count = len(self.df)
-        self.train_count = len(X_train)
-        self.test_count = len(X_test)
+        self.train_count = len(self.train_indexes)
+        self.test_count = len(self.test_indexes)
+        self.feature_count = len(FEATURES)
+        self.feature_names = FEATURES
+        self.actual_predicted_points = self.make_actual_predicted_points(self.y_test_unit, self.linear_pred_unit)
+        self.loss_points = self.make_loss_points()
+        self.heatmap_points, self.heatmap_labels = self.make_correlation_heatmap()
 
         # Du lieu thong ke phuc vu bieu do tren giao dien.
         self.district_counts = self.df["district"].value_counts().to_dict()
-        self.avg_price_by_district = self.df.groupby("district")[TARGET].mean().round(2).to_dict()
+        self.avg_price_by_district = self.df.groupby("district")[PRICE_PER_M2].mean().round(2).to_dict()
         self.avg_area_by_district = self.df.groupby("district")["area_m2"].mean().round(2).to_dict()
         self.scatter_points, self.regression_line_points = self.make_regression_chart()
 
+    # =====================
+    # Linear Regression
+    # =====================
+
+    def train_linear_regression(self, X, y):
+        X_train = X[self.train_indexes]
+        X_test = X[self.test_indexes]
+        y_train_raw = y[self.train_indexes]
+        y_test_raw = y[self.test_indexes]
+
+        X_train, X_test, self.X_mean, self.X_std = normalize_train_test(X_train, X_test)
+        y_train, y_test, self.y_mean, self.y_std = normalize_train_test(y_train_raw, y_test_raw)
+
+        X_train = add_bias(X_train)
+        X_test = add_bias(X_test)
+
+        self.weights, self.train_history, self.test_history = train(X_train, y_train, X_test, y_test)
+
+        pred_unit = predict(X_test, self.weights) * self.y_std + self.y_mean
+        self.linear_pred_unit = pred_unit
+        pred_total = pred_unit * self.test_area_values
+        mae, mse, rmse, r2 = metrics(self.y_test_total, pred_total)
+        self.linear_result = self.format_model_result("Linear Regression", mae, mse, rmse, r2)
+        return pred_total
+
+    def predict_linear(self, X_new):
+        X_new = (X_new - self.X_mean) / self.X_std
+        X_new = add_bias(X_new)
+        return float(predict(X_new, self.weights)[0] * self.y_std + self.y_mean)
+
+    # =====================
+    # Random Forest
+    # =====================
+
+    def train_random_forest(self, X, y):
+        self.random_forest = RandomForestRegressor(
+            n_estimators=400,
+            max_depth=6,
+            min_samples_leaf=10,
+            random_state=42,
+        )
+        self.random_forest.fit(X[self.train_indexes], y[self.train_indexes])
+
+        pred_unit = self.random_forest.predict(X[self.test_indexes])
+        self.random_forest_pred_unit = pred_unit
+        pred_total = pred_unit * self.test_area_values
+        mae, mse, rmse, r2 = metrics(self.y_test_total, pred_total)
+        self.random_forest_result = self.format_model_result("Random Forest", mae, mse, rmse, r2)
+        return pred_total
+
+    def predict_random_forest(self, X_new):
+        return float(self.random_forest.predict(X_new)[0])
+
+    # =====================
+    # Model comparison
+    # =====================
+
+    def choose_best_model(self, linear_pred_total, rf_pred_total):
+        self.model_results = {
+            "linear": self.linear_result,
+            "random_forest": self.random_forest_result,
+        }
+        self.best_model_key = (
+            "random_forest"
+            if self.random_forest_result["r2"] > self.linear_result["r2"]
+            else "linear"
+        )
+        self.best_algorithm = self.model_results[self.best_model_key]["name"]
+
+    def format_model_result(self, name, mae, mse, rmse, r2):
+        return {
+            "name": name,
+            "mae": float(mae),
+            "mse": float(mse),
+            "rmse": float(rmse),
+            "r2": float(r2),
+            "mae_billion": float(mae / 1000),
+            "mse_billion2": float(mse / 1_000_000),
+            "rmse_billion": float(rmse / 1000),
+        }
+
+    def make_actual_predicted_points(self, y_true, y_pred):
+        points = [
+            {"x": round(float(actual), 2), "y": round(float(predicted), 2)}
+            for actual, predicted in zip(y_true, y_pred)
+        ]
+        return points[:250]
+
+    def make_loss_points(self):
+        if not self.train_history:
+            return {"train": [], "test": []}
+
+        step = max(len(self.train_history) // 120, 1)
+        epochs = list(range(0, len(self.train_history), step))
+        return {
+            "train": [
+                {"x": int(epoch), "y": round(float(self.train_history[epoch]), 6)}
+                for epoch in epochs
+            ],
+            "test": [
+                {"x": int(epoch), "y": round(float(self.test_history[epoch]), 6)}
+                for epoch in epochs
+            ],
+        }
+
+    def make_correlation_heatmap(self):
+        columns = FEATURES + [PRICE_PER_M2]
+        labels = ["Diện tích", "Mặt tiền", "Đường", "Khu vực", "Đơn giá"]
+        corr = self.df[columns].corr(numeric_only=True).fillna(0)
+        points = []
+        for row_index, row_name in enumerate(columns):
+            for col_index, col_name in enumerate(columns):
+                points.append({
+                    "x": labels[col_index],
+                    "y": labels[row_index],
+                    "v": round(float(corr.loc[row_name, col_name]), 3),
+                })
+        return points, labels
+
     def make_regression_chart(self):
-        # Bieu do minh hoa moi quan he dien tich - gia dat.
+        # Bieu do minh hoa moi quan he dien tich - don gia dat.
         # Model chinh van dung nhieu feature, duong nay chi de truc quan hoa.
-        chart_df = self.df[["area_m2", TARGET]].dropna().copy()
+        chart_df = self.df[["area_m2", PRICE_PER_M2]].dropna().copy()
         chart_df = chart_df[
             (chart_df["area_m2"] <= chart_df["area_m2"].quantile(0.98))
-            & (chart_df[TARGET] <= chart_df[TARGET].quantile(0.98))
+            & (chart_df[PRICE_PER_M2] <= chart_df[PRICE_PER_M2].quantile(0.98))
         ]
 
         if len(chart_df) > 350:
             chart_df = chart_df.sample(350, random_state=42)
 
         scatter_points = [
-            {"x": round(float(row.area_m2), 2), "y": round(float(row.price_million_vnd), 2)}
+            {"x": round(float(row.area_m2), 2), "y": round(float(row.price_per_m2_million), 2)}
             for row in chart_df.itertuples(index=False)
         ]
 
         x = chart_df["area_m2"].to_numpy(dtype=float)
-        y = chart_df[TARGET].to_numpy(dtype=float)
+        y = chart_df[PRICE_PER_M2].to_numpy(dtype=float)
         if len(x) < 2:
             return scatter_points, []
 
@@ -223,39 +360,62 @@ class LinearRegressionModel:
 
         return scatter_points, line_points
 
+    def get_train_test_indexes(self, n_rows: int):
+        np.random.seed(42)
+        indices = np.arange(n_rows)
+        np.random.shuffle(indices)
+        test_size = int(0.2 * len(indices))
+        return indices[test_size:], indices[:test_size]
+
     def chart_data(self):
         # Tra ve JSON-friendly data cho Chart.js o frontend.
         labels = list(DISTRICTS.keys())
         return {
-            "labels": labels,
+            "labels": [DISTRICT_LABELS[label] for label in labels],
             "counts": [int(self.district_counts.get(label, 0)) for label in labels],
             "avg_prices": [float(self.avg_price_by_district.get(label, 0)) for label in labels],
             "avg_areas": [float(self.avg_area_by_district.get(label, 0)) for label in labels],
             "scatter_points": self.scatter_points,
             "regression_line": self.regression_line_points,
+            "loss": self.loss_points,
+            "actual_predicted": self.actual_predicted_points,
+            "heatmap_points": self.heatmap_points,
+            "heatmap_labels": self.heatmap_labels,
         }
 
-    def predict(self, area_m2: float, frontage_m: float, road_width_m: float, district: str) -> PredictionResult:
+    def predict(
+        self,
+        area_m2: float,
+        frontage_m: float,
+        road_width_m: float,
+        district: str,
+        algorithm: str = "linear",
+    ) -> PredictionResult:
         if district not in DISTRICTS:
-            raise ValueError("Quan/huyen khong hop le.")
+            raise ValueError("Quận/huyện không hợp lệ.")
 
         # Tao 1 dong du lieu moi dung cung thu tu FEATURES luc train.
-        X_new = np.array(
-            [[area_m2, frontage_m, road_width_m, DISTRICTS[district], area_m2 * frontage_m]],
-            dtype=float,
-        )
-        # Chuan hoa du lieu moi bang mean/std da hoc tu tap train.
-        X_new = (X_new - self.X_mean) / self.X_std
-        X_new = add_bias(X_new)
+        X_new = np.array([[area_m2, frontage_m, road_width_m, DISTRICTS[district]]], dtype=float)
 
-        # Du doan xong dua ve don vi trieu VND.
-        price_million = float(predict(X_new, self.weights)[0] * self.y_std + self.y_mean)
+        if algorithm == "best":
+            algorithm = self.primary_model_key
+        if algorithm not in self.model_results:
+            raise ValueError("Thuật toán không hợp lệ.")
+
+        if algorithm == "random_forest":
+            price_per_m2 = self.predict_random_forest(X_new)
+        else:
+            price_per_m2 = self.predict_linear(X_new)
+
+        price_per_m2 = max(price_per_m2, 0)
+        price_million = price_per_m2 * area_m2
         price_million = max(price_million, 0)
 
         return PredictionResult(
             price_million_vnd=price_million,
             price_billion_vnd=price_million / 1000,
-            price_per_m2_million=price_million / area_m2 if area_m2 else 0,
+            price_per_m2_million=price_per_m2,
+            algorithm=self.model_results[algorithm]["name"],
         )
 
 

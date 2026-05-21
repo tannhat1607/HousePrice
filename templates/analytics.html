@@ -1,0 +1,210 @@
+{% load static %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Analytics - LandPrice</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'predictor/css/app.css' %}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg border-bottom sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'predictor:linear' %}">LandPrice</a>
+            <div class="nav-menu ms-auto">
+                <a class="nav-link" href="{% url 'predictor:index' %}">Tổng quan</a>
+                <a class="nav-link" href="{% url 'predictor:linear' %}">Linear Regression</a>
+                <a class="nav-link active" href="{% url 'predictor:analytics' %}">Analytics</a>
+            </div>
+            <button class="btn btn-outline-primary btn-sm ms-2" type="button" id="theme-toggle">Dark</button>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        <section class="panel mb-4">
+            <p class="eyebrow mb-1">Dataset Analytics</p>
+            <h1 class="h4 mb-1">Thông số dữ liệu và đánh giá mô hình</h1>
+            <p class="text-secondary small mb-0">Các biểu đồ bên dưới dùng để trình bày quá trình huấn luyện và chất lượng dự đoán.</p>
+            {% if error %}
+                <div class="alert alert-danger mt-3">{{ error }}</div>
+            {% endif %}
+        </section>
+
+        {% if model %}
+            <section class="stats-grid mb-4">
+                <div class="stat"><span>Dataset Size</span><strong>{{ model.row_count }}</strong></div>
+                <div class="stat"><span>Train/Test</span><strong>{{ model.train_count }}/{{ model.test_count }}</strong></div>
+                <div class="stat"><span>Features</span><strong>{{ model.feature_count }}</strong></div>
+                <div class="stat"><span>Mô hình chính</span><strong>{{ model.primary_algorithm }}</strong></div>
+            </section>
+
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <section class="panel h-100">
+                        <p class="eyebrow mb-3">Linear Metrics</p>
+                        <div class="metric"><span>MAE</span><strong>{{ model.mae_billion|floatformat:2 }} tỷ</strong></div>
+                        <div class="metric"><span>MSE</span><strong>{{ model.mse_billion2|floatformat:2 }} tỷ²</strong></div>
+                        <div class="metric"><span>RMSE</span><strong>{{ model.rmse_billion|floatformat:2 }} tỷ</strong></div>
+                        <div class="metric"><span>R² Score</span><strong>{{ model.r2|floatformat:3 }}</strong></div>
+                        <p class="text-secondary small mt-3 mb-0">MSE là bình phương sai số nên đơn vị là tỷ², không phải tỷ VNĐ.</p>
+                    </section>
+                </div>
+                <div class="col-lg-7">
+                    <section class="panel h-100">
+                        <p class="eyebrow mb-3">Algorithm</p>
+                        <div class="metric"><span>Mô hình chính</span><strong>{{ model.primary_algorithm }}</strong></div>
+                        <div class="metric"><span>Linear Training</span><strong>Gradient Descent</strong></div>
+                        <div class="metric"><span>Random Forest</span><strong>400 trees, max_depth=6</strong></div>
+                        <div class="metric"><span>Target</span><strong>Đơn giá triệu/m²</strong></div>
+                        <div class="metric"><span>Nghiệm</span><strong>w = w - α × gradient</strong></div>
+                    </section>
+                </div>
+            </div>
+
+            <section class="panel mt-4" id="random-forest-form">
+                <div class="mb-4">
+                    <p class="eyebrow mb-1">Random Forest Demo</p>
+                    <h2 class="h5 mb-1">Dự đoán thử bằng Random Forest</h2>
+                    <p class="text-secondary small mb-0">Form này dùng model benchmark Random Forest để so sánh với Linear Regression, không phải mô hình chính của đề tài.</p>
+                </div>
+
+                {% if rf_error %}
+                    <div class="alert alert-danger">{{ rf_error }}</div>
+                {% endif %}
+
+                <div class="row g-4 align-items-stretch">
+                    <div class="col-lg-7">
+                        <form method="post" class="h-100" novalidate>
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="rf_district">Quận/Huyện</label>
+                                    <select class="form-select" id="rf_district" name="district" required>
+                                        {% for value, label in districts %}
+                                            <option value="{{ value }}" {% if rf_inputs.district == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="rf_area_m2">Diện tích (m²)</label>
+                                    <input class="form-control" id="rf_area_m2" name="area_m2" type="number" min="1" max="5000" step="0.1" value="{{ rf_inputs.area_m2 }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="rf_frontage_m">Mặt tiền (m)</label>
+                                    <input class="form-control" id="rf_frontage_m" name="frontage_m" type="number" min="0" max="100" step="0.1" value="{{ rf_inputs.frontage_m }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="rf_road_width_m">Đường trước đất (m)</label>
+                                    <input class="form-control" id="rf_road_width_m" name="road_width_m" type="number" min="0" max="100" step="0.1" value="{{ rf_inputs.road_width_m }}" required>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary mt-4" type="submit">Dự đoán bằng Random Forest</button>
+                        </form>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <div class="result-card h-100">
+                            <p class="eyebrow mb-3">Random Forest Result</p>
+                            {% if rf_result %}
+                                <div class="price-row">
+                                    <div class="price">{{ rf_result.price_billion_vnd|floatformat:2 }}</div>
+                                    <div class="price-unit">tỷ</div>
+                                </div>
+                                <div class="price-sub">{{ rf_result.price_million_vnd|floatformat:0 }} triệu VNĐ</div>
+                                <div class="metric"><span>Đơn giá</span><strong>{{ rf_result.price_per_m2_million|floatformat:2 }} triệu/m²</strong></div>
+                                <div class="metric"><span>Mô hình</span><strong>{{ rf_result.algorithm }}</strong></div>
+                                <div class="metric"><span>Khu vực</span><strong>{{ rf_selected_district_label }}</strong></div>
+                            {% else %}
+                                <div class="empty-state">
+                                    <p>Nhập thông tin và bấm <strong>Dự đoán bằng Random Forest</strong> để xem kết quả benchmark.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel mt-4">
+                <div class="mb-4">
+                    <p class="eyebrow mb-1">Model Comparison</p>
+                    <h2 class="h5 mb-1">So sánh Linear Regression và Random Forest</h2>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0 data-table">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>MAE</th>
+                                <th>RMSE</th>
+                                <th>MSE</th>
+                                <th>R²</th>
+                                <th>Kết luận</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for key, item in model.model_results.items %}
+                                <tr>
+                                    <td>{{ item.name }}</td>
+                                    <td>{{ item.mae_billion|floatformat:2 }} tỷ</td>
+                                    <td>{{ item.rmse_billion|floatformat:2 }} tỷ</td>
+                                    <td>{{ item.mse_billion2|floatformat:2 }} tỷ²</td>
+                                    <td>{{ item.r2|floatformat:3 }}</td>
+                                    <td>{% if key == "linear" %}<strong>Mô hình chính</strong>{% elif key == model.best_model_key %}Benchmark tốt hơn{% else %}Benchmark{% endif %}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="panel mt-4">
+                <div class="mb-4">
+                    <p class="eyebrow mb-1">Loss</p>
+                    <h2 class="h5 mb-1">Loss giảm theo epoch</h2>
+                </div>
+                <div class="chart-box chart-box-large">
+                    <canvas id="lossChart"></canvas>
+                </div>
+            </section>
+
+            <section class="panel mt-4">
+                <div class="mb-4">
+                    <p class="eyebrow mb-1">Actual vs Predicted</p>
+                    <h2 class="h5 mb-1">So sánh đơn giá thật và đơn giá dự đoán</h2>
+                </div>
+                <div class="chart-box chart-box-large">
+                    <canvas id="actualPredictedChart"></canvas>
+                </div>
+            </section>
+
+            <section class="panel mt-4">
+                <div class="mb-4">
+                    <p class="eyebrow mb-1">Dataset</p>
+                    <h2 class="h5 mb-1">Phân bố dữ liệu theo khu vực</h2>
+                </div>
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <div class="chart-box">
+                            <canvas id="districtCountChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="chart-box">
+                            <canvas id="avgPriceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+    </main>
+
+    {% include "partials/footer.html" %}
+
+    {{ chart_data|json_script:"chart-data" }}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="{% static 'predictor/js/app.js' %}"></script>
+</body>
+</html>

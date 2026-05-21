@@ -1,10 +1,14 @@
 {% load static %}
+{% static 'predictor/images/Danang.jpg' as danang_img %}
+{% static 'predictor/images/pic1.jpg' as pic1_img %}
+{% static 'predictor/images/pic2.jpeg' as pic2_img %}
+{% static 'predictor/images/pic3.jpg' as pic3_img %}
 <!doctype html>
 <html lang="vi">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Du doan gia dat Da Nang</title>
+    <title>LandPrice - Tổng quan</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'predictor/css/app.css' %}">
@@ -12,10 +16,11 @@
 <body>
     <nav class="navbar navbar-expand-lg border-bottom sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="/">LandPrice</a>
+            <a class="navbar-brand" href="{% url 'predictor:index' %}">LandPrice</a>
             <div class="nav-menu ms-auto">
-                <a class="nav-link" href="#linear-section">Linear Regression</a>
-                <a class="nav-link" href="#dataset-section">Thong so dataset</a>
+                <a class="nav-link active" href="{% url 'predictor:index' %}">Tổng quan</a>
+                <a class="nav-link" href="{% url 'predictor:linear' %}">Linear Regression</a>
+                <a class="nav-link" href="{% url 'predictor:analytics' %}">Analytics</a>
             </div>
             <button class="btn btn-outline-primary btn-sm ms-2" type="button" id="theme-toggle">Dark</button>
         </div>
@@ -24,151 +29,85 @@
     <main class="container py-4">
         <section class="hero mb-4">
             <div class="hero-slides">
-                <div class="hero-slide active" style="background-image: url('{% static 'predictor/images/Danang.jpg' %}')"></div>
-                <div class="hero-slide" style="background-image: url('{% static 'predictor/images/pic1.jpg' %}')"></div>
-                <div class="hero-slide" style="background-image: url('{% static 'predictor/images/pic2.jpeg' %}')"></div>
-                <div class="hero-slide" style="background-image: url('{% static 'predictor/images/pic3.jpg' %}')"></div>
+                <div class="hero-slide active" style="background-image: url('{{ danang_img }}')"></div>
+                <div class="hero-slide" style="background-image: url('{{ pic1_img }}')"></div>
+                <div class="hero-slide" style="background-image: url('{{ pic2_img }}')"></div>
+                <div class="hero-slide" style="background-image: url('{{ pic3_img }}')"></div>
             </div>
             <div class="hero-overlay">
-                <h1>Du doan gia dat Da Nang</h1>
-                <p>Ung dung Linear Regression tu xay dung bang NumPy de uoc luong gia dat theo khu vuc.</p>
+                <h1>Dự đoán giá đất Đà Nẵng</h1>
+                <p>Ứng dụng Machine Learning ước lượng đơn giá đất theo diện tích, mặt tiền, đường trước đất và khu vực.</p>
             </div>
             <div class="hero-dots" id="hero-dots"></div>
         </section>
 
-        <div class="row g-4 align-items-stretch" id="linear-section">
-            <div class="col-lg-7">
-                <section class="panel h-100">
-                    <div class="form-heading text-center">
-                        <p class="eyebrow mb-1">Linear Regression</p>
-                        <h1 class="h4 mb-1">Nhap thong so lo dat</h1>
-                        <p class="text-secondary small mb-0">Mo hinh tra ve gia uoc luong theo trieu VND.</p>
-                    </div>
-
-                    {% if error %}
-                        <div class="alert alert-danger mt-3">{{ error }}</div>
-                    {% endif %}
-
-                    <form method="post" id="predict-form" class="mt-3" novalidate>
-                        {% csrf_token %}
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="district">Quan/Huyen</label>
-                                <select class="form-select" id="district" name="district" required>
-                                    {% for district in districts %}
-                                        <option value="{{ district }}" {% if inputs.district == district %}selected{% endif %}>{{ district }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="area_m2">Dien tich (m2)</label>
-                                <input class="form-control" id="area_m2" name="area_m2" type="number" min="1" max="5000" step="0.1" value="{{ inputs.area_m2 }}" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="frontage_m">Mat tien (m)</label>
-                                <input class="form-control" id="frontage_m" name="frontage_m" type="number" min="0" max="100" step="0.1" value="{{ inputs.frontage_m }}" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="road_width_m">Duong truoc dat (m)</label>
-                                <input class="form-control" id="road_width_m" name="road_width_m" type="number" min="0" max="100" step="0.1" value="{{ inputs.road_width_m }}" required>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center justify-content-center gap-3 mt-4">
-                            <button class="btn btn-primary px-5" type="submit">Du doan gia dat</button>
-                            <button class="btn btn-outline-secondary" type="button" id="reset-btn">Nhap lai</button>
-                        </div>
-                    </form>
-                </section>
-            </div>
-
-            <div class="col-lg-5" id="result-section">
-                <section class="result-card h-100">
-                    <p class="eyebrow mb-3">Ket qua</p>
-                    {% if result %}
-                        <div class="price-row">
-                            <div class="price">{{ result.price_billion_vnd|floatformat:2 }}</div>
-                            <div class="price-unit">ty</div>
-                        </div>
-                        <div class="price-sub">{{ result.price_million_vnd|floatformat:0 }} trieu VND</div>
-                        <div class="metric">
-                            <span>Don gia</span>
-                            <strong>{{ result.price_per_m2_million|floatformat:2 }} trieu/m2</strong>
-                        </div>
-                        <div class="metric">
-                            <span>Khu vuc</span>
-                            <strong>{{ inputs.district }}</strong>
-                        </div>
-                        <div class="metric">
-                            <span>Dien tich / Mat tien</span>
-                            <strong>{{ inputs.area_m2 }} m2 / {{ inputs.frontage_m }} m</strong>
-                        </div>
-                        <div class="metric">
-                            <span>RMSE / MAE</span>
-                            <strong>{{ model.rmse|floatformat:0 }} / {{ model.mae|floatformat:0 }} trieu</strong>
-                        </div>
-                        <div class="metric">
-                            <span>R2 Score</span>
-                            <strong>{{ model.r2|floatformat:3 }}</strong>
-                        </div>
-                    {% else %}
-                        <div class="empty-state">
-                            <p>Nhap thong so va bam <strong>Du doan gia dat</strong> de xem ket qua.</p>
-                        </div>
-                    {% endif %}
-                </section>
-            </div>
-        </div>
-
-        {% if model %}
-            <section class="mt-4 stats-grid" id="dataset-section">
-                <div class="stat">
-                    <span>Du lieu hop le</span>
-                    <strong>{{ model.row_count }} mau</strong>
-                </div>
-                <div class="stat">
-                    <span>Train/Test</span>
-                    <strong>{{ model.train_count }}/{{ model.test_count }}</strong>
-                </div>
-                <div class="stat">
-                    <span>RMSE</span>
-                    <strong>{{ model.rmse|floatformat:0 }} trieu</strong>
-                </div>
-                <div class="stat">
-                    <span>MAE</span>
-                    <strong>{{ model.mae|floatformat:0 }} trieu</strong>
-                </div>
-            </section>
-
-            <section class="panel mt-4">
-                <div class="mb-4">
-                    <p class="eyebrow mb-1">Thong so dataset</p>
-                    <h2 class="h5 mb-1">Bieu do du lieu dat</h2>
-                    <p class="text-secondary small mb-0">So luong mau va gia trung binh theo tung quan/huyen.</p>
-                </div>
-                <div class="row g-4">
-                    <div class="col-12">
-                        <div class="chart-box chart-box-large">
-                            <canvas id="regressionScatterChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="chart-box">
-                            <canvas id="districtCountChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="col-lg-6">
-                        <div class="chart-box">
-                            <canvas id="avgPriceChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </section>
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
+
+        <section class="panel">
+            <div class="mb-4">
+                <p class="eyebrow mb-1">Project Overview</p>
+                <h2 class="h4 mb-1">Tổng quan hệ thống</h2>
+                <p class="text-secondary mb-0">Website tập trung vào bài toán regression: dự đoán giá đất ở Đà Nẵng theo đơn giá triệu/m², sau đó quy đổi ra tổng giá dựa trên diện tích lô đất.</p>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <div class="info-box h-100">
+                        <strong>Dữ liệu đầu vào</strong>
+                        <p>Dữ liệu chỉ lấy các feature liên quan đến đặc điểm của lô đất.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="info-box h-100">
+                        <strong>Đặc trưng sử dụng</strong>
+                        <p>Mô hình dùng diện tích, mặt tiền, độ rộng đường trước đất và mã quận/huyện để học quan hệ với đơn giá đất.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="info-box h-100">
+                        <strong>Mô hình chính</strong>
+                        <p>Linear Regression được xây dựng bằng NumPy và huấn luyện bằng Gradient Descent. Random Forest chỉ dùng để benchmark trong phần Analytics.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel mt-4">
+            <div class="row g-4 align-items-center">
+                <div class="col-lg-8">
+                    <p class="eyebrow mb-1">Linear Regression</p>
+                    <h2 class="h5 mb-2">Dự đoán giá đất bằng mô hình tuyến tính</h2>
+                    <p class="text-secondary mb-0">Khi cần nhập thông tin lô đất và xem giá dự đoán, hãy mở trang Linear Regression. Trang đó chứa form nhập dữ liệu, kết quả dự đoán và các thông tin chính của mô hình.</p>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <a class="btn btn-primary" href="{% url 'predictor:linear' %}">Đi tới Linear Regression</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel mt-4">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <p class="eyebrow mb-1">Analytics</p>
+                    <h2 class="h5 mb-2">Đánh giá và so sánh mô hình</h2>
+                    <p class="text-secondary mb-3">Trang Analytics trình bày MAE, RMSE, MSE, R², biểu đồ Loss, Actual vs Predicted và bảng so sánh Linear Regression với Random Forest.</p>
+                    <a class="btn btn-outline-primary" href="{% url 'predictor:analytics' %}">Xem Analytics</a>
+                </div>
+                <div class="col-lg-6">
+                    <div class="info-box h-100">
+                        <strong>Cách đọc kết quả</strong>
+                        <p>R² cho biết mô hình giải thích được bao nhiêu phần biến thiên của đơn giá đất. MAE và RMSE cho biết sai số dự đoán sau khi quy đổi về tổng giá theo diện tích.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
-    {{ chart_data|json_script:"chart-data" }}
+    {% include "partials/footer.html" %}
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="{% static 'predictor/js/app.js' %}"></script>
 </body>
 </html>

@@ -1,0 +1,32 @@
+<footer class="site-footer">
+    <div class="container">
+        <div class="footer-brand">
+            <strong>LandPrice</strong>
+            <p>Dự đoán giá đất Đà Nẵng bằng Linear Regression, phục vụ mục đích học tập và tham khảo.</p>
+            <span>© 2026 LandPrice</span>
+        </div>
+
+        <div class="footer-col">
+            <strong>Sản phẩm</strong>
+            <a href="{% url 'predictor:index' %}">Tổng quan</a>
+            <a href="{% url 'predictor:linear' %}">Dự đoán giá đất</a>
+            <a href="{% url 'predictor:analytics' %}">Analytics</a>
+        </div>
+
+        <div class="footer-col">
+            <strong>Mô hình</strong>
+            <a href="{% url 'predictor:linear' %}">Linear Regression</a>
+            <a href="{% url 'predictor:analytics' %}">So sánh Random Forest</a>
+            <a href="{% url 'predictor:analytics' %}">Chỉ số đánh giá</a>
+        </div>
+
+        <div class="footer-newsletter">
+            <strong>Thông tin</strong>
+            <p>Dữ liệu có thể thay đổi theo thị trường. Kết quả dự đoán không thay thế định giá thực tế.</p>
+            <form>
+                <input type="email" placeholder="Email của bạn">
+                <button type="button">›</button>
+            </form>
+        </div>
+    </div>
+</footer>

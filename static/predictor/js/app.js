@@ -21,6 +21,8 @@ if (resetButton) {
         document.getElementById("frontage_m").value = 5;
         document.getElementById("road_width_m").value = 7.5;
         document.getElementById("district").value = "Cam Le";
+        const algorithm = document.getElementById("algorithm");
+        if (algorithm) algorithm.value = "linear";
     });
 }
 
@@ -90,74 +92,6 @@ if (chartDataElement && window.Chart) {
         }
     });
 
-    const regressionCanvas = document.getElementById("regressionScatterChart");
-    if (regressionCanvas) {
-        new Chart(regressionCanvas, {
-            type: "scatter",
-            data: {
-                datasets: [
-                    {
-                        label: "Du lieu that",
-                        data: chartData.scatter_points || [],
-                        backgroundColor: "rgba(13,110,253,0.32)",
-                        borderColor: "rgba(13,110,253,0.45)",
-                        pointRadius: 3,
-                        pointHoverRadius: 5
-                    },
-                    {
-                        type: "line",
-                        label: "Duong hoi quy",
-                        data: chartData.regression_line || [],
-                        borderColor: "#dc3545",
-                        backgroundColor: "#dc3545",
-                        borderWidth: 3,
-                        pointRadius: 0,
-                        tension: 0
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        labels: { color: axisColor(), font: { size: 12, weight: "700" } }
-                    },
-                    title: {
-                        display: true,
-                        text: "Minh hoa Linear Regression: dien tich va gia dat",
-                        font: { size: 13, weight: "700" },
-                        color: titleColor(),
-                        padding: { bottom: 16 }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => {
-                                const point = context.raw || {};
-                                return `${context.dataset.label}: ${point.x} m2, ${Math.round(point.y)} trieu`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        type: "linear",
-                        title: { display: true, text: "Dien tich (m2)", color: axisColor() },
-                        grid: { color: gridColor() },
-                        ticks: { color: axisColor(), font: { size: 11 } }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: { display: true, text: "Gia dat (trieu VND)", color: axisColor() },
-                        grid: { color: gridColor() },
-                        ticks: { color: axisColor(), font: { size: 11 } }
-                    }
-                }
-            }
-        });
-    }
-
     const countCanvas = document.getElementById("districtCountChart");
     if (countCanvas) {
         new Chart(countCanvas, {
@@ -165,7 +99,7 @@ if (chartDataElement && window.Chart) {
             data: {
                 labels,
                 datasets: [{
-                    label: "So mau",
+                    label: "Số mẫu",
                     data: chartData.counts || [],
                     backgroundColor: "rgba(13,110,253,0.75)",
                     hoverBackgroundColor: "#0d6efd",
@@ -173,7 +107,7 @@ if (chartDataElement && window.Chart) {
                     borderSkipped: false
                 }]
             },
-            options: commonOptions("So luong mau dat theo quan/huyen")
+            options: commonOptions("Số lượng mẫu đất theo quận/huyện")
         });
     }
 
@@ -184,7 +118,7 @@ if (chartDataElement && window.Chart) {
             data: {
                 labels,
                 datasets: [{
-                    label: "Gia TB (trieu)",
+                    label: "Đơn giá TB (triệu/m²)",
                     data: chartData.avg_prices || [],
                     backgroundColor: "rgba(8,66,152,0.7)",
                     hoverBackgroundColor: "#084298",
@@ -192,7 +126,127 @@ if (chartDataElement && window.Chart) {
                     borderSkipped: false
                 }]
             },
-            options: commonOptions("Gia dat trung binh theo quan/huyen (trieu VND)")
+            options: commonOptions("Đơn giá đất trung bình theo quận/huyện (triệu/m²)")
+        });
+    }
+
+    const lossCanvas = document.getElementById("lossChart");
+    if (lossCanvas) {
+        new Chart(lossCanvas, {
+            type: "line",
+            data: {
+                datasets: [
+                    {
+                        label: "Train Loss",
+                        data: chartData.loss?.train || [],
+                        borderColor: "#0d6efd",
+                        backgroundColor: "rgba(13,110,253,0.12)",
+                        borderWidth: 2,
+                        pointRadius: 0
+                    },
+                    {
+                        label: "Test Loss",
+                        data: chartData.loss?.test || [],
+                        borderColor: "#dc3545",
+                        backgroundColor: "rgba(220,53,69,0.12)",
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, labels: { color: axisColor() } },
+                    title: { display: true, text: "Loss theo epoch", color: titleColor() }
+                },
+                scales: {
+                    x: {
+                        type: "linear",
+                        title: { display: true, text: "Epoch", color: axisColor() },
+                        grid: { color: gridColor() },
+                        ticks: { color: axisColor() }
+                    },
+                    y: {
+                        title: { display: true, text: "MSE Loss", color: axisColor() },
+                        grid: { color: gridColor() },
+                        ticks: { color: axisColor() }
+                    }
+                }
+            }
+        });
+    }
+
+    const actualCanvas = document.getElementById("actualPredictedChart");
+    if (actualCanvas) {
+        const points = chartData.actual_predicted || [];
+        const maxValue = Math.max(1, ...points.flatMap((point) => [point.x, point.y]));
+        new Chart(actualCanvas, {
+            type: "scatter",
+            data: {
+                datasets: [
+                    {
+                        label: "Actual vs Predicted",
+                        data: points,
+                        backgroundColor: "rgba(13,110,253,0.35)",
+                        borderColor: "rgba(13,110,253,0.6)",
+                        pointRadius: 3
+                    },
+                    {
+                        type: "line",
+                        label: "Đường lý tưởng",
+                        data: [{ x: 0, y: 0 }, { x: maxValue, y: maxValue }],
+                        borderColor: "#dc3545",
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, labels: { color: axisColor() } },
+                    title: { display: true, text: "Đơn giá thật và đơn giá dự đoán", color: titleColor() }
+                },
+                scales: {
+                    x: {
+                        type: "linear",
+                        title: { display: true, text: "Actual (triệu/m²)", color: axisColor() },
+                        grid: { color: gridColor() },
+                        ticks: { color: axisColor() }
+                    },
+                    y: {
+                        title: { display: true, text: "Predicted (triệu/m²)", color: axisColor() },
+                        grid: { color: gridColor() },
+                        ticks: { color: axisColor() }
+                    }
+                }
+            }
+        });
+    }
+
+    const heatmap = document.getElementById("correlationHeatmap");
+    if (heatmap) {
+        const heatmapLabels = chartData.heatmap_labels || [];
+        const points = chartData.heatmap_points || [];
+        heatmap.style.gridTemplateColumns = `130px repeat(${heatmapLabels.length}, minmax(92px, 1fr))`;
+        heatmap.innerHTML = `<div></div>${heatmapLabels.map((label) => `<strong>${label}</strong>`).join("")}`;
+
+        heatmapLabels.forEach((rowLabel) => {
+            heatmap.insertAdjacentHTML("beforeend", `<strong>${rowLabel}</strong>`);
+            heatmapLabels.forEach((colLabel) => {
+                const point = points.find((item) => item.x === colLabel && item.y === rowLabel) || { v: 0 };
+                const alpha = Math.min(Math.abs(point.v), 1);
+                const color = point.v >= 0
+                    ? `rgba(13,110,253,${0.12 + alpha * 0.78})`
+                    : `rgba(220,53,69,${0.12 + alpha * 0.78})`;
+                heatmap.insertAdjacentHTML(
+                    "beforeend",
+                    `<span style="background:${color}">${point.v.toFixed(2)}</span>`
+                );
+            });
         });
     }
 }

@@ -1,0 +1,169 @@
+{% load static %}
+{% static 'predictor/images/Danang.jpg' as danang_img %}
+{% static 'predictor/images/pic1.jpg' as pic1_img %}
+{% static 'predictor/images/pic2.jpeg' as pic2_img %}
+{% static 'predictor/images/pic3.jpg' as pic3_img %}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dự đoán giá đất Đà Nẵng</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'predictor/css/app.css' %}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg border-bottom sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'predictor:linear' %}">LandPrice</a>
+            <div class="nav-menu ms-auto">
+                <a class="nav-link" href="{% url 'predictor:index' %}">Tổng quan</a>
+                <a class="nav-link active" href="{% url 'predictor:linear' %}">Linear Regression</a>
+                <a class="nav-link" href="{% url 'predictor:analytics' %}">Analytics</a>
+            </div>
+            <button class="btn btn-outline-primary btn-sm ms-2" type="button" id="theme-toggle">Dark</button>
+        </div>
+    </nav>
+
+    <main class="container py-4">
+        <div class="row g-4 align-items-stretch">
+            <div class="col-lg-7">
+                <section class="panel h-100">
+                    <div class="form-heading text-center">
+                        <p class="eyebrow mb-1">Prediction Form</p>
+                        <h1 class="h4 mb-1">Nhập thông số lô đất</h1>
+                        <p class="text-secondary small mb-0">Kết quả hiển thị theo tỷ VNĐ và đơn giá triệu/m².</p>
+                    </div>
+
+                    {% if error %}
+                        <div class="alert alert-danger mt-3">{{ error }}</div>
+                    {% endif %}
+
+                    <form method="post" id="predict-form" class="mt-3" novalidate>
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="district">Quận/Huyện</label>
+                                <select class="form-select" id="district" name="district" required>
+                                    {% for value, label in districts %}
+                                        <option value="{{ value }}" {% if inputs.district == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" id="algorithm" name="algorithm" value="linear">
+                            <div class="col-md-6">
+                                <label class="form-label" for="area_m2">Diện tích (m²)</label>
+                                <input class="form-control" id="area_m2" name="area_m2" type="number" min="1" max="5000" step="0.1" value="{{ inputs.area_m2 }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="frontage_m">Mặt tiền (m)</label>
+                                <input class="form-control" id="frontage_m" name="frontage_m" type="number" min="0" max="100" step="0.1" value="{{ inputs.frontage_m }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="road_width_m">Đường trước đất (m)</label>
+                                <input class="form-control" id="road_width_m" name="road_width_m" type="number" min="0" max="100" step="0.1" value="{{ inputs.road_width_m }}" required>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-center gap-3 mt-4">
+                            <button class="btn btn-primary px-5" type="submit">Dự đoán giá đất</button>
+                            <button class="btn btn-outline-secondary" type="button" id="reset-btn">Nhập lại</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+
+            <div class="col-lg-5" id="result-section">
+                <section class="result-card h-100">
+                    <p class="eyebrow mb-3">Kết quả</p>
+                    {% if result %}
+                        <div class="price-row">
+                            <div class="price">{{ result.price_billion_vnd|floatformat:2 }}</div>
+                            <div class="price-unit">tỷ</div>
+                        </div>
+                        <div class="price-sub">{{ result.price_million_vnd|floatformat:0 }} triệu VNĐ</div>
+                        <div class="metric"><span>Đơn giá</span><strong>{{ result.price_per_m2_million|floatformat:2 }} triệu/m²</strong></div>
+                        <div class="metric"><span>Thuật toán</span><strong>{{ result.algorithm }}</strong></div>
+                        <div class="metric"><span>Khu vực</span><strong>{{ selected_district_label }}</strong></div>
+                        <div class="metric"><span>Diện tích / Mặt tiền</span><strong>{{ inputs.area_m2 }} m² / {{ inputs.frontage_m }} m</strong></div>
+                    {% else %}
+                        <div class="empty-state">
+                            <p>Nhập thông số và bấm <strong>Dự đoán giá đất</strong> để xem kết quả.</p>
+                        </div>
+                    {% endif %}
+                </section>
+            </div>
+        </div>
+
+        {% if model %}
+            <section class="mt-4 stats-grid">
+                <div class="stat"><span>Mô hình chính</span><strong>{{ model.primary_algorithm }}</strong></div>
+                <div class="stat"><span>Dataset Size</span><strong>{{ model.row_count }}</strong></div>
+                <div class="stat"><span>Features</span><strong>{{ model.feature_count }}</strong></div>
+                <div class="stat"><span>R² Score</span><strong>{{ model.r2|floatformat:3 }}</strong></div>
+            </section>
+
+            <section class="panel mt-4">
+                <div class="mb-3">
+                    <p class="eyebrow mb-1">Model</p>
+                    <h2 class="h5 mb-1">Cách mô hình tính giá</h2>
+                </div>
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <div class="info-box">
+                            <strong>Đặc trưng đầu vào</strong>
+                            <p>Diện tích, mặt tiền, độ rộng đường trước đất và mã quận/huyện.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="info-box">
+                            <strong>So sánh thuật toán</strong>
+                            <p>Linear Regression là mô hình chính của đề tài. Random Forest chỉ dùng ở trang Analytics để benchmark và đối chiếu chất lượng dự đoán.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="panel mt-4">
+            <div class="mb-3">
+                <p class="eyebrow mb-1">Recent Predictions</p>
+                <h2 class="h5 mb-1">Các lần dự đoán gần đây</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 data-table">
+                    <thead>
+                        <tr>
+                            <th>Diện tích</th>
+                            <th>Mặt tiền</th>
+                            <th>Đường</th>
+                            <th>Khu vực</th>
+                            <th>Model</th>
+                            <th>Giá dự đoán</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in recent_predictions %}
+                            <tr>
+                                <td>{{ item.area_m2 }} m²</td>
+                                <td>{{ item.frontage_m }} m</td>
+                                <td>{{ item.road_width_m }} m</td>
+                                <td>{{ item.district }}</td>
+                                <td>{{ item.algorithm }}</td>
+                                <td>{{ item.price_billion_vnd }} tỷ</td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="6" class="text-secondary">Chưa có dự đoán nào trong phiên này.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    {% include "partials/footer.html" %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'predictor/js/app.js' %}"></script>
+</body>
+</html>
